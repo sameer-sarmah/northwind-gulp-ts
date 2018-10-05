@@ -12,6 +12,8 @@ var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
 var tsify = require("tsify");
 var sourcemaps = require('gulp-sourcemaps');
+var runSequence = require('run-sequence');
+var inject = require('gulp-inject');
 
 gulp.task("copy-assets",function(){
     return gulp.src(["src/assets/*.jpg"])
@@ -32,11 +34,7 @@ return browserify("src/app/product.component.ts")
 .pipe(gulp.dest('build'))
 .pipe(reload({stream:true}));
 });
-gulp.task('html', function(){
-    gulp.src('src/index.html')
-	.pipe(gulp.dest('./build/'))
-    .pipe(reload({stream:true}));
-});
+
 
 
 gulp.task('styles', function() {
@@ -51,7 +49,7 @@ gulp.task('styles', function() {
 gulp.task('browser-sync', function() {
     browserSync({
         server: {
-            baseDir: "./build/"
+            baseDir: "./"
         }
     });
 });
@@ -62,5 +60,18 @@ gulp.task ('watch', function(){
   	gulp.watch('src/index.html', ['html']);
 });
 
+gulp.task('inject-js-css', function () {
+    var target = gulp.src('./src/index.html');
+    var sources = gulp.src(['./build/bundle.js', './build/css/main.css'], {read: false});
+    return target.pipe(inject(sources))
+      .pipe(gulp.dest('./'));
 
-gulp.task("default", ["html","styles","transpile-ts","copy-assets", 'browser-sync', 'watch']);
+  });
+
+  gulp.task('build', function(callback) {
+    runSequence(["styles","transpile-ts","copy-assets"],
+                'inject-js-css','browser-sync', 'watch',
+                callback);
+  });
+
+gulp.task("default", ["build"]);
